@@ -10,8 +10,12 @@ The **robust.density routine** is still in development and should estimate the d
 
 ## Installing
 
-On Mac (has not been tested on Linux nor Windows, but should workt too), run:
+On Mac (this has not yet been tested on Linux nor Windows, but should workt too), first install devtools by running the following line in an R console:
 
-```R
+	install.packages("devtools")
 
-```
+Then, still in the R console, install the robustmap package from GitHub by running:
+
+	devtools::install_github("rafaelgramos/robustmap")
+
+You should then be able to load the package normally.
