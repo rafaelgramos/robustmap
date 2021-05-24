@@ -1,6 +1,6 @@
-#Robustmap package#
+# Robustmap package
 
-##Overview##
+## Overview
 
 This package implement routines for mapping point data set via quadrat counting and kernel density estimation while taking into account the robustness and internal (spatial) uniformity of the aggregated counts. Too coarse of a quadrat size (or bandwidth) may lead to lack of detail and to the Ecological Fallacy; too fine of a quadrat size (or bandwidth), however, will generate unreliable counts and densities.
 
@@ -8,7 +8,7 @@ The **robust.quadcount** routine estimates a quadrat size that balances both rob
 
 The **robust.density routine** is still in development and should estimate the density of a point pattern via a variable bandwidth method, in which the bandwidth is the largest possible such that the point subset contained by it displays Complete Spatial Randomness. This way, for any given pixel, the number of points considered in the density estimation can be maximized (improving robustness) while not incurring into the Ecological Fallacy of averaging over an area with varying point density.
 
-##Installing##
+## Installing
 
 On Mac (has not been tested on Linux nor Windows, but should workt too), run:
 
