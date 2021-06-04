@@ -1,7 +1,3 @@
-library(spatstat)
-library(raster)
-library(MASS)
-
 #' Optimal granularity for quadrat counting
 #' 
 #' Given a point set, finds an optimal granularity for quadrat counting that
@@ -124,8 +120,8 @@ robust.quadcount<-function(point_set,
   map = list()
   nlon = floor((W[2] - W[1])/opt_granularity)
   nlat = floor((W[4] - W[3])/opt_granularity)
-  q = quadratcount(as.ppp(point_set,W),nlon,nlat)
-  map$counts = raster(matrix(data=q[],nrow=nrow(q),ncol=ncol(q)))
+  q = spatstat.geom::quadratcount(spatstat.geom::as.ppp(point_set,W),nlon,nlat)
+  map$counts = raster::raster(matrix(data=q[],nrow=nrow(q),ncol=ncol(q)))
   map$counts = raster::setExtent(map$counts,ext=raster::extent(W))
   map$opt_granularity = opt_granularity
 
@@ -140,12 +136,12 @@ robust.quadcount<-function(point_set,
                                             robustness_method = robustness_method)
   
   tmp = matrix(data=stats_final_sample$samples_covar,nrow=nrow(map$counts),ncol=ncol(map$counts))
-  map$covar = raster::flip(raster(tmp),direction=2)
-  map$covar = setExtent(map$covar,extent(map$counts))
+  map$covar = raster::flip(raster::raster(tmp),direction=2)
+  map$covar = raster::setExtent(map$covar,raster::extent(map$counts))
   
   tmp = matrix(data=stats_final_sample$samples_csr_pass,nrow=nrow(map$counts),ncol=ncol(map$counts))
-  map$is.csr = !(raster::flip(raster(tmp),direction=2))
-  map$is.csr = setExtent(map$is.csr,extent(map$counts))
+  map$is.csr = !(raster::flip(raster::raster(tmp),direction=2))
+  map$is.csr = raster::setExtent(map$is.csr,raster::extent(map$counts))
   
   robust = my_spatialstats$robustness
   unif = my_spatialstats$uniformity
@@ -313,7 +309,7 @@ get_spatialstats_sample<-function(sample_set,
               sample_set$offset_lat[j],
               sample_set$offset_lat[j]+sample_set$window_h)
     
-    sub_points = sample_set$point_set[inside.owin(x=sample_set$point_set$lon,
+    sub_points = sample_set$point_set[spatstat.geom::inside.owin(x=sample_set$point_set$lon,
                                                   y=sample_set$point_set$lat,
                                                   w=W_ext),]
     
@@ -341,9 +337,9 @@ get_spatialstats_sample<-function(sample_set,
       
       if(uniformity_method == "Nearest-neighbor") {
         if(samples_count[j] > 20) {
-          my_clarkevans = clarkevans.test(as.ppp(sub_points,W_disp),alternative="two.sided")#,correction = "Donnelly")
+          my_clarkevans = clarkevans.test(spatstat.geom::as.ppp(sub_points,W_disp),alternative="two.sided")#,correction = "Donnelly")
         } else {
-          my_clarkevans = clarkevans.test(as.ppp(sub_points,W_disp),alternative="two.sided",nsim=100)#,correction = "Donnelly")
+          my_clarkevans = clarkevans.test(spatstat.geom::as.ppp(sub_points,W_disp),alternative="two.sided",nsim=100)#,correction = "Donnelly")
         }
         samples_csr_p[j] =  my_clarkevans$p.value
         # assign T to quadrats that pass the threshold 'signif' for CSR
@@ -351,7 +347,7 @@ get_spatialstats_sample<-function(sample_set,
       }
       else if(uniformity_method == "Quadratcount") {
         # test CST with the quadrat test
-        my_quadrattest = quadrat.test(as.ppp(sub_points,W_disp),nx=5)
+        my_quadrattest = spatstat.core::quadrat.test(spatstat.geom::as.ppp(sub_points,W_disp),nx=5)
         samples_csr_p[j] = my_quadrattest$p.value
         samples_csr_pass[j] = my_quadrattest$p.value < (1-signif)
       }
@@ -401,7 +397,7 @@ calc_covar<-function(nsub,ntotal,robustness_method){
   }
   else if(robustness_method == "Poisson") {
     # calculating coef of var using the Poisson estimation method (see paper)
-    tmp = fitdistr(nsub,"Poisson")
+    tmp = MASS::fitdistr(nsub,"Poisson")
     samples_covar = tmp$sd/tmp$estimate
   }
   else if(robustness_method == "Resampling") {
@@ -443,14 +439,14 @@ points2quad<-function(point_set,my_scale,mask=NULL){
         max(point_set$lat))
   nlon = floor((max_b_lon - min_b_lon)/my_scale)
   nlat = floor((max_b_lat - min_b_lat)/my_scale)
-  my_ret = quadratcount(as.ppp(point_set,W),nlon,nlat)
+  my_ret = spatstat.geom::quadratcount(spatstat.geom::as.ppp(point_set,W),nlon,nlat)
   
   if(!is.null(mask)){
     Wmask = c(min(mask$lon),
           max(mask$lon),
           min(mask$lat),
           max(mask$lat))
-    my_mask = quadratcount(as.ppp(mask,Wmask),nlon,nlat) 
+    my_mask = spatstat.geom::quadratcount(spatstat.geom::as.ppp(mask,Wmask),nlon,nlat) 
     my_ret[my_mask <= 0] = NA
   }
   
@@ -540,11 +536,11 @@ robust.density<-function(point_pattern,pointsAsMask=NULL,res_lat,res_lon){
   
   Wall = c(min_lon,max_lon,min_lat,max_lat)
   count_mat = mask_mat = dens_mat = coefvar_mat = k_mat = matrix(nrow=n_row,ncol=n_col)
-  count_mat[] = as.matrix(quadratcount(as.ppp(cbind(point_pattern$lon,point_pattern$lat),Wall),n_col,n_row))
+  count_mat[] = as.matrix(spatstat.geom::quadratcount(spatstat.geom::as.ppp(cbind(point_pattern$lon,point_pattern$lat),Wall),n_col,n_row))
   if(is.null(pointsAsMask)) {
     mask_mat = NULL
   } else {
-    mask_mat[] = as.matrix(quadratcount(as.ppp(cbind(pointsAsMask$lon,pointsAsMask$lat),Wall),n_col,n_row))
+    mask_mat[] = as.matrix(spatstat.geom::quadratcount(spatstat.geom::as.ppp(cbind(pointsAsMask$lon,pointsAsMask$lat),Wall),n_col,n_row))
     count_mat[mask_mat <= 0] = NA
   }
   

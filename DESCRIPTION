@@ -16,3 +16,8 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1.9001
 Suggests: knitr, rmarkdown
 VignetteBuilder: knitr
+Imports:
+    MASS (>= 7.3-54),
+    spatstat.geom (>= 2.1-0),
+    spatstat.core (>= 2.1-2),
+    raster (>= 3.4-10)
