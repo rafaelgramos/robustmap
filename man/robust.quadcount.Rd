@@ -62,7 +62,7 @@ for point_set.}
 }
 \description{
 Given a point set, finds an optimal granularity for quadrat counting that
-balances uniformity and robustness, as described in Ramos et al (2021).
+balances uniformity and robustness, as described in Ramos et al. (2021).
 }
 \references{
 Ramos, R. G., Silva, B. F., Clarke, K. C., & Prates, M. (2020).

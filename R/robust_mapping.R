@@ -43,6 +43,7 @@ require(MASS)
 #' Too Fine to be Good? Issues of Granularity, Uniformity and Error in Spatial 
 #' Crime Analysis. Journal of Quantitative Criminology, 1-25.
 #' robust.quadcount() 
+#' @export
 
 robust.quadcount<-function(point_set,
                            random_samples=T,
@@ -467,6 +468,7 @@ robust.density.unit<-function(count_mat,mask_mat=NULL,i,j,max_mask){
   max_points = 400
   while(T){
     dim_count = dim(count_mat)
+    
     i_min = i-k
     i_max = i+k
     j_min = j-k
@@ -476,45 +478,22 @@ robust.density.unit<-function(count_mat,mask_mat=NULL,i,j,max_mask){
     if(j_min < 1) j_min=1
     if(j_max > dim_count[2]) j_max = dim_count[2]
     
-    #tmp_mask = count_mat
-    #tmp_mask[] = NA
-    #for(p in i_min:i_max){
-    #  for(q in j_min:j_max) {
-    #    if(((p-i)^2 + (q-j)^2)<=k2) {
-    #      tmp_mask[p,q] = 1
-    #    }
-    #  }
-    #}
-    
-    # i_min = i-k
-    # k = i - i_min
-    # i_max = i+k
-    # k = i_max - i
-    # 101 -k   to 101 + k
-    
-    
     my_mask = max_mask[(1001-(i-i_min)):(1001 + (i_max-i)),(1001-(j-j_min)):(1001 + (j_max-j))] <= k
     my_mask[!my_mask] = NA
     
     sample_count = count_mat[i_min:i_max,j_min:j_max]*my_mask[]
     sample_count_noNAs = sample_count[!is.na(sample_count)]
-    sum_notNAs = length(sample_count_noNAs)#sum(!is.na(sample_count))
+    sum_notNAs = length(sample_count_noNAs)
     
     if((sum_notNAs>=2)&(sum(sample_count_noNAs)>1)) {
-      #if(mean((sample_count_noNAs)) > 5) {
-        csr_test = chisq.test(sample_count_noNAs,simulate.p.value=F)
-      #} else {
-      #  csr_test = chisq.test(sample_count_noNAs,simulate.p.value=F,B=10)
-      #}
+      csr_test = chisq.test(sample_count_noNAs,simulate.p.value=F)
       pval = csr_test$p.value
     }
     else {
       pval = 1 
     }
     if(pval <= 0.001) break
-    #if(k > 100) {
     if((sum(sample_count_noNAs) > max_points)| (k>=100)) {
-      #print("aha!!!")
       break
     }
     klast = k
@@ -529,11 +508,6 @@ robust.density.unit<-function(count_mat,mask_mat=NULL,i,j,max_mask){
     dens = mean(sample_count_noNAs)
     coef_var = 1/sqrt(sum(sample_count_noNAs))
   }
-  #if((dens > 1.131)&(dens < 1.1315)) {
-    #print("#")
-    #print(sample_count_noNAs)
-    #print("#")
-  #}
   return(c(dens,coef_var,klast))
 }
 
