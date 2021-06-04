@@ -1,6 +1,6 @@
-require(spatstat)
-require(raster)
-require(MASS)
+library(spatstat)
+library(raster)
+library(MASS)
 
 #' Optimal granularity for quadrat counting
 #' 
