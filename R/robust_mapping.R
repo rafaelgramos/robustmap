@@ -35,12 +35,28 @@
 #' for point_set.
 #' @keywords quadrat granularity adequate optimal
 #' @author Rafael G. Ramos (main proponent and coder), Marcos Prates (contributor)
-#' @references Ramos, R. G., Silva, B. F., Clarke, K. C., & Prates, M. (2020). 
+#' @references Ramos, R. G., Silva, B. F., Clarke, K. C., & Prates, M. (2021). 
 #' Too Fine to be Good? Issues of Granularity, Uniformity and Error in Spatial 
 #' Crime Analysis. Journal of Quantitative Criminology, 1-25.
 #' robust.quadcount()
 #' @import terra
 #' @export
+#' 
+#' @examples
+#' library(robustmap)
+#' # Loading point data
+#' burglary <- sf::read_sf(dsn = "data", layer = "burglary")
+#' burglary <- data.frame(lon=burglary$lon_m,
+#'                        lat=burglary$lat_m)
+#' # Estimating optimal granularity using robust.quadcount
+#' burglary_map <- robust.quadcount(burglary,verbose = T)
+#' 
+#' # Retriving estimated granularity
+#' burglary_map$opt_granularity
+#' 
+#' # Plotting resulting map
+#' terra::plot(burglary_map$counts)
+#' 
 
 robust.quadcount<-function(point_set,
                            random_samples=T,

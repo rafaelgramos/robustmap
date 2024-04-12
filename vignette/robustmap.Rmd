@@ -6,3 +6,35 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
 ---
+
+```{r setup, warning=FALSE}
+```
+
+The following code illustrates how to use the robust.quadcount function:
+
+```{r warning=FALSE}
+library(magrittr)
+library(robustmap)
+
+# Loading burglary data points
+burglary <- sf::read_sf(dsn = "../data", layer = "burglary")
+burglary <- data.frame(lon=burglary$lon_m,
+                       lat=burglary$lat_m)
+
+# Running robust_quadcount with default parameters
+burglary_map <- burglary %>% robust.quadcount()
+
+```
+
+Once the function returns, the optimal granularity (in the same unit of the original coordinates) can be retrieved by:
+
+```{r}
+burglary_map$opt_granularity
+```
+
+The map of burglary counts can be plotted using:
+
+```{r}
+# Plotting the final map
+terra::plot(burglary_map$counts)
+```
