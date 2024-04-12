@@ -41,21 +41,28 @@
 #' robust.quadcount() 
 #' @export
 
+require(terra)
+
 robust.quadcount<-function(point_set,
                            random_samples=T,
                            nsamples=500,
                            signif=0.99,
-                           tradeoff_crit=c("sum","product"),#,"derivative"), #NOT doing derivative right now
+                           tradeoff_crit=c("product","sum"),#,"derivative"), #NOT doing derivative right now
                            uniformity_method=c("Quadratcount","Nearest-neighbor"),
                            robustness_method=c("Poisson","Binomial","Resampling"),
                            robustness_k = -3,
                            verbose=F,
                            my_scales=NULL,
                            W=NULL){
+  
+  tradeoff_crit <- match.arg(tradeoff_crit)
+  uniformity_method <- match.arg(uniformity_method)
+  robustness_method <- match.arg(robustness_method)
+  
   if(is.null(W)) {
     W <- c(min(point_set[,1]),max(point_set[,1]),min(point_set[,2]),max(point_set[,2]))
   }
-    
+  
   #HOW is this initialized?
   if(is.null(my_scales)) {
     #maxscale <- 0.10*min(c(W[2] - W[1],W[4]-W[3]))
@@ -66,22 +73,21 @@ robust.quadcount<-function(point_set,
   
   # calculating robustness and uniformity for each granularity in 'my_scales'
   my_spatialstats <- get_spatialstats_all(point_set,
-                                        my_scales,
-                                        my_scales,
-                                        random_samples=random_samples,
-                                        signif=signif,
-                                        uniformity_method=uniformity_method,
-                                        robustness_method=robustness_method,
-                                        robustness_k = robustness_k,
-                                        verbose=verbose)
+                                          my_scales,
+                                          my_scales,
+                                          random_samples=random_samples,
+                                          signif=signif,
+                                          uniformity_method=uniformity_method,
+                                          robustness_method=robustness_method,
+                                          robustness_k = robustness_k,
+                                          verbose=verbose)
   
-  print("A")
+  if(verbose) {
+    print("Estimating optimal balance between uniformity and robustness")
+  }
   robust <- my_spatialstats$robustness
-  print("B")
   unif <- my_spatialstats$uniformity
-  print("C")
   # tradeoff analysis
-  print("D")
   if(tradeoff_crit == "sum") {
     metric <- unif+robust
     splinefit <- smooth.spline(x=my_scales[!is.na(metric)],y=metric[!is.na(metric)],df=10)
@@ -91,92 +97,62 @@ robust.quadcount<-function(point_set,
     opt_ur <- my_spline$y[opt_i]
     
   } else if(tradeoff_crit == "product") {
-    print("E")
     metric <- unif*robust
-    print("F")
     splinefit <- smooth.spline(x=my_scales[!is.na(metric)],y=metric[!is.na(metric)],df=10)
-    print("G")
     my_spline <- predict(splinefit,x=my_scales)
-    print("H")
     opt_i <- which.max(my_spline$y)
-    print("I")
     opt_granularity <- my_spline$x[opt_i]
-    print("J")
     opt_ur <- my_spline$y[opt_i]
-    print("K")
     
-  #} else if(tradeoff_crit == "derivative") {
+    #} else if(tradeoff_crit == "derivative") {
     
-  #  splinefit = smooth.spline(x=robust,y=unif,df=6)
-  #  my_spline = predict(splinefit,x=seq(0,1,0.01))
-  #  my_derivs = predict(splinefit,x=seq(0,1,0.01),deriv=1)
-  #  opt_i = which.min((my_derivs$y+1)^2)
-  #  opt_robust = my_spline$x[opt_i]
-  #  opt_uniformity = my_spline$y[opt_i]
+    #  splinefit = smooth.spline(x=robust,y=unif,df=6)
+    #  my_spline = predict(splinefit,x=seq(0,1,0.01))
+    #  my_derivs = predict(splinefit,x=seq(0,1,0.01),deriv=1)
+    #  opt_i = which.min((my_derivs$y+1)^2)
+    #  opt_robust = my_spline$x[opt_i]
+    #  opt_uniformity = my_spline$y[opt_i]
     
-  #  splinefit = smooth.spline(x=my_scales,y=robust,df=10)
-  #  my_spline = predict(splinefit,x=seq(25,1000,5))
-  #  opt_i = which.min((my_spline$y-opt_robust)^2)
-  #  opt_granularity_1 = my_spline$x[opt_i]
-  #  splinefit = smooth.spline(x=my_scales,y=unif,df=10)
-  #  my_spline = predict(splinefit,x=seq(25,1000,5))
-  #  opt_i = which.min((my_spline$y-opt_uniformity)^2)
-  #  opt_granularity_2 = my_spline$x[opt_i]
-  #  opt_granularity = 0.5*(opt_granularity_1 + opt_granularity_2)
+    #  splinefit = smooth.spline(x=my_scales,y=robust,df=10)
+    #  my_spline = predict(splinefit,x=seq(25,1000,5))
+    #  opt_i = which.min((my_spline$y-opt_robust)^2)
+    #  opt_granularity_1 = my_spline$x[opt_i]
+    #  splinefit = smooth.spline(x=my_scales,y=unif,df=10)
+    #  my_spline = predict(splinefit,x=seq(25,1000,5))
+    #  opt_i = which.min((my_spline$y-opt_uniformity)^2)
+    #  opt_granularity_2 = my_spline$x[opt_i]
+    #  opt_granularity = 0.5*(opt_granularity_1 + opt_granularity_2)
     
   } else {
     print("Tradeoff criteria not recognized. Options allowed: sum, product.")#, derivative.")
     return(NULL)
   }
-  print("L")
   map <- list()
-  print("M")
   nlon <- floor((W[2] - W[1])/opt_granularity)
-  print("N")
   nlat <- floor((W[4] - W[3])/opt_granularity)
-  print("O")
   q <- spatstat.geom::quadratcount(spatstat.geom::as.ppp(point_set,W),nlon,nlat)
-  print("P")
   map$counts <- terra::rast(matrix(data=q[],nrow=nrow(q),ncol=ncol(q)))
-  print("Q")
   terra::ext(map$counts) <- terra::ext(W)
-  print("R")
   map$opt_granularity <- opt_granularity
-  print("D")
   final_sample <- create_samples(point_set=point_set,
-                              random_samples = F,
-                              window_w = opt_granularity,
-                              window_h = opt_granularity)
-  print("T")
+                                 random_samples = F,
+                                 window_w = opt_granularity,
+                                 window_h = opt_granularity)
   stats_final_sample <- get_spatialstats_sample(sample_set = final_sample,
-                                            uniformity_method = uniformity_method,
-                                            signif=signif,
-                                            robustness_method = robustness_method)
-  print("U")
+                                                uniformity_method = uniformity_method,
+                                                signif=signif,
+                                                robustness_method = robustness_method)
   tmp <- matrix(data=stats_final_sample$samples_covar,nrow=nrow(map$counts),ncol=ncol(map$counts))
-  print("V")
   map$covar <- terra::flip(terra::rast(tmp),direction="horizontal")
-  print("W")
   terra::ext(map$covar) <- terra::ext(map$counts)
-  print("X")
   tmp <- matrix(data=stats_final_sample$samples_csr_pass,nrow=nrow(map$counts),ncol=ncol(map$counts))
-  print("Y")
   map$is.csr <- !(terra::flip(terra::rast(tmp),direction="horizontal"))
-  print("Z")
   terra::ext(map$is.csr) <- terra::ext(map$counts)
-  print("Z1")
   robust <- my_spatialstats$robustness
-  print("Z2")
   unif <- my_spatialstats$uniformity
-  print("Z3")
   map$uniformity.curve <- unif
-  print("Z4")
   map$granularities.tested <- my_scales
-  print("Z5")
-  #map$unif.score = 
   map$robustness.curve <- robust
-  print("Z6")
-  #map$unit.size = 
   return(map)
 }
 
@@ -206,6 +182,9 @@ get_spatialstats_all<-function(point_set,
                                uniformity_method=c("Quadratcount","Nearest-neighbor"),
                                verbose=verbose){
   
+  robustness_method <- match.arg(robustness_method)
+  uniformity_method <- match.arg(uniformity_method)
+  
   if(robustness_k >= 0) {
     print("robust_k parameter must be less than zero. See documentation for details.")
     return(NULL)
@@ -230,19 +209,34 @@ get_spatialstats_all<-function(point_set,
   scales_zeros <- vector(length=len_scales)
   
   for(i in 1:len_scales) {
-    if(verbose) print(paste(100*(i/len_scales),"%"))
+    if(verbose) {
+      cat('\014',append=T)
+      cat("Estimating uniformity and robustness at various scales:\n")
+      cat("[")
+      for(k in 1:i){
+        cat("=")
+      }
+      if(i < len_scales) {
+        for(k in (i+1):len_scales){
+          cat(" ")
+          }
+      }
+      cat("] | ")
+      cat(paste(round(100*(i/len_scales)),"%\n",sep=""),append=T)
+      Sys.sleep(.05)
+    }
     
     # generating set of quadrats of the current granularity for taking the samples
     my_samples <- create_samples(point_set=point_set,
-                                random_samples = random_samples,
-                                nsamples = nsamples,
-                                window_w = scales_lon[i],
-                                window_h = scales_lat[i])
+                                 random_samples = random_samples,
+                                 nsamples = nsamples,
+                                 window_w = scales_lon[i],
+                                 window_h = scales_lat[i])
     
     my_stats_sample <- get_spatialstats_sample(sample_set = my_samples,
-                                              signif = signif,
-                                              uniformity_method = uniformity_method,
-                                              robustness_method = robustness_method)
+                                               signif = signif,
+                                               uniformity_method = uniformity_method,
+                                               robustness_method = robustness_method)
     
     # avg number of points per sample (and var)
     scales_count[i] <- mean(my_stats_sample$samples_count[!is.na(my_stats_sample$samples_count)])
@@ -259,21 +253,17 @@ get_spatialstats_all<-function(point_set,
     # number of zeros
     scales_zeros[i] <- my_stats_sample$samples_zeros/my_samples$nsample
   }
-  print("1")
   scales_robustness <- exp(-3*scales_covar)
-  print("2")
   scales_uniformity <- 1-scales_csr_pass
-  print("3")
   out = list(count = scales_count,
-                  var = scales_var,
-                  #csr_p = scales_csr_p,
-                  #csr_median_p = scales_csr_median_p,
-                  uniformity = scales_uniformity,
-                  robustness = scales_robustness,
-                  zerors = scales_zeros
+             var = scales_var,
+             #csr_p = scales_csr_p,
+             #csr_median_p = scales_csr_median_p,
+             uniformity = scales_uniformity,
+             robustness = scales_robustness,
+             zerors = scales_zeros
   )
-  print("4")
-  return(out)
+ return(out)
 }
 
 create_samples<-function(point_set,random_samples,nsamples,window_w,window_h) {
@@ -319,6 +309,9 @@ get_spatialstats_sample<-function(sample_set,
                                   robustness_method=c("Poisson","Binomial","Resampling"),
                                   uniformity_method=c("Quadratcount","Nearest-neighbor")){
   
+  robustness_method <- match.arg(robustness_method)
+  uniformity_method <- match.arg(uniformity_method)
+  
   nsamples <- length(sample_set$offset_lon)
   
   # allocating temporary structures
@@ -338,8 +331,8 @@ get_spatialstats_sample<-function(sample_set,
               sample_set$offset_lat[j]+sample_set$window_h)
     
     sub_points <- sample_set$point_set[spatstat.geom::inside.owin(x=sample_set$point_set$lon,
-                                                  y=sample_set$point_set$lat,
-                                                  w=W_ext),]
+                                                                  y=sample_set$point_set$lat,
+                                                                  w=W_ext),]
     
     # estimate robustness and uniformity
     if(nrow(sub_points)==0) {
@@ -356,13 +349,12 @@ get_spatialstats_sample<-function(sample_set,
       # allocating a slightly larger quadrat just to avoid that our sampled points to fall
       # exactly in the boundary of the quadrat.
       W_disp <- c(sample_set$offset_lon[j]-0.0001,
-                 sample_set$offset_lon[j]+sample_set$window_w+0.0001,
-                 sample_set$offset_lat[j]-0.0001,
-                 sample_set$offset_lat[j]+sample_set$window_h+0.0001)
+                  sample_set$offset_lon[j]+sample_set$window_w+0.0001,
+                  sample_set$offset_lat[j]-0.0001,
+                  sample_set$offset_lat[j]+sample_set$window_h+0.0001)
       
       # testing Complete Spatial Randomness (CSR) with Clark-Evans nearest neighbor test (part of estimating uniformity)
       samples_count[j] <- nrow(sub_points)
-      
       if(uniformity_method == "Nearest-neighbor") {
         if(samples_count[j] > 20) {
           my_clarkevans <- spatstat.explore::clarkevans.test(spatstat.geom::as.ppp(sub_points,W_disp),alternative="two.sided")#,correction = "Donnelly")
@@ -383,7 +375,6 @@ get_spatialstats_sample<-function(sample_set,
         samples_csr_p[j] <- NA
         samples_csr_pass[j] <- NA
       }
-      
       samples_covar[j] <- calc_covar(nrow(sub_points),sample_set$npopulation,robustness_method)
       # Calculating robustness.
       # First we calculate the expected coefficient of variation for the samples, using different methods
@@ -462,18 +453,18 @@ points2quad<-function(point_set,my_scale,mask=NULL){
   min_b_lon <- min(point_set$lon)
   min_b_lat <- min(point_set$lat)
   W <- c(min(point_set$lon),
-        max(point_set$lon),
-        min(point_set$lat),
-        max(point_set$lat))
+         max(point_set$lon),
+         min(point_set$lat),
+         max(point_set$lat))
   nlon <- floor((max_b_lon - min_b_lon)/my_scale)
   nlat <- floor((max_b_lat - min_b_lat)/my_scale)
   my_ret <- spatstat.geom::quadratcount(spatstat.geom::as.ppp(point_set,W),nlon,nlat)
   
   if(!is.null(mask)){
     Wmask = c(min(mask$lon),
-          max(mask$lon),
-          min(mask$lat),
-          max(mask$lat))
+              max(mask$lon),
+              min(mask$lat),
+              max(mask$lat))
     my_mask <- spatstat.geom::quadratcount(spatstat.geom::as.ppp(mask,Wmask),nlon,nlat) 
     my_ret[my_mask <= 0] = NA
   }
@@ -574,6 +565,7 @@ robust.density<-function(point_pattern,pointsAsMask=NULL,res_lat,res_lon){
   
   for(i in 1:n_row){
     print(100*i/n_row)
+    
     for(j in 1:n_col){
       #print(i)
       #print(n_row)
