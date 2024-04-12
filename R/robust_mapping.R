@@ -38,10 +38,9 @@
 #' @references Ramos, R. G., Silva, B. F., Clarke, K. C., & Prates, M. (2020). 
 #' Too Fine to be Good? Issues of Granularity, Uniformity and Error in Spatial 
 #' Crime Analysis. Journal of Quantitative Criminology, 1-25.
-#' robust.quadcount() 
+#' robust.quadcount()
+#' @import terra
 #' @export
-
-require(terra)
 
 robust.quadcount<-function(point_set,
                            random_samples=T,

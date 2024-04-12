@@ -9,7 +9,7 @@ robust.quadcount(
   random_samples = T,
   nsamples = 500,
   signif = 0.99,
-  tradeoff_crit = c("sum", "product"),
+  tradeoff_crit = c("product", "sum"),
   uniformity_method = c("Quadratcount", "Nearest-neighbor"),
   robustness_method = c("Poisson", "Binomial", "Resampling"),
   robustness_k = -3,
