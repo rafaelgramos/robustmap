@@ -1,18 +1,22 @@
 ---
-title: "Robustmap: examples"
+title: "robustmap"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Robustmap: examples}
+  %\VignetteIndexEntry{robustmap}
   %\VignetteEngine{knitr::rmarkdown}
-  \usepackage[utf8]{inputenc}
+  %\VignetteEncoding{UTF-8}
 ---
 
-```{r setup, warning=FALSE}
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
 ```
 
 The following code illustrates how to use the robust.quadcount function:
 
-```{r warning=FALSE}
+```{r setup,warning=FALSE}
 library(magrittr)
 library(robustmap)
 
@@ -37,4 +41,3 @@ The map of burglary counts can be plotted using:
 ```{r}
 # Plotting the final map
 terra::plot(burglary_map$counts)
-```
