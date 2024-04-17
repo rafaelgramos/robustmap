@@ -427,6 +427,9 @@ calc_covar<-function(nsub,ntotal,robustness_method){
   return(samples_covar)
 }
 
+#' Estimate robust time slices
+#' @export
+#' 
 
 robust.timeslices<-function(point_set,
                             aggregation_method=c("count","density"),
