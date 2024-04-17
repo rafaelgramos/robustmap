@@ -337,9 +337,9 @@ get_spatialstats_sample<-function(sample_set,
   for(j in 1:nsamples) {
     # extracting the points inside the quadrat
     W_ext <- c(sample_set$offset_lon[j],
-              sample_set$offset_lon[j]+sample_set$window_w,
-              sample_set$offset_lat[j],
-              sample_set$offset_lat[j]+sample_set$window_h)
+               sample_set$offset_lon[j]+sample_set$window_w,
+               sample_set$offset_lat[j],
+               sample_set$offset_lat[j]+sample_set$window_h)
     
     is_inside <- spatstat.geom::inside.owin(x=sample_set$point_set$lon,
                                             y=sample_set$point_set$lat,
@@ -427,24 +427,25 @@ calc_covar<-function(nsub,ntotal,robustness_method){
   return(samples_covar)
 }
 
-#' Estimate robust time slices
+#' Estimate robust grid using either counts or density (NOT IMPLEMENTED YET)
+#' and with a time dimension (optional) as separate layers.
 #' @export
 #' 
 
-robust.timeslices<-function(point_set,
-                            aggregation_method=c("count","density"),
-                            opt_granularity=NULL,
-                            random_samples=T,
-                            nsamples=500,
-                            signif=0.99,
-                            tradeoff_crit=c("product","sum"),#,"derivative"), #NOT doing derivative right now
-                            uniformity_method=c("Quadratcount","Nearest-neighbor"),
-                            robustness_method=c("Poisson","Binomial","Resampling"),
-                            robustness_k = -3,
-                            verbose=F,
-                            my_scales=NULL,
-                            W=NULL) {
-  time_stamps <- unique(point_set$time)
+robust.grid<-function(point_set,
+                      aggregation_method=c("count","density"),
+                      temporal=T,
+                      opt_granularity=NULL,
+                      random_samples=T,
+                      nsamples=500,
+                      signif=0.99,
+                      tradeoff_crit=c("product","sum"),#,"derivative"), #NOT doing derivative right now
+                      uniformity_method=c("Quadratcount","Nearest-neighbor"),
+                      robustness_method=c("Poisson","Binomial","Resampling"),
+                      robustness_k = -3,
+                      verbose=F,
+                      my_scales=NULL,
+                      W=NULL) {
   if(is.null(W)) {
     W <- c(min(point_set$lon),
            max(point_set$lon),
@@ -465,16 +466,19 @@ robust.timeslices<-function(point_set,
     opt_granularity <- fullmap$opt_granularity
   }
   count_per_timestamp <- NULL
-  for(i in 1:length(time_stamps)){
-    newlayer <- point_set %>%
-      filter(time == time_stamps[i]) %>%
-      points2quad(opt_granularity,W) %>% 
-      quad2mat() %>%
-      terra::rast()
-    if(is.null(count_per_timestamp)) {
-      count_per_timestamp <- newlayer
-    } else {
-      count_per_timestamp <- c(count_per_timestamp,newlayer)
+  if(temporal) {
+    time_stamps <- unique(point_set$time)
+    for(i in 1:length(time_stamps)){
+      newlayer <- point_set %>%
+        filter(time == time_stamps[i]) %>%
+        points2quad(opt_granularity,W) %>% 
+        quad2mat() %>%
+        terra::rast()
+      if(is.null(count_per_timestamp)) {
+        count_per_timestamp <- newlayer
+      } else {
+        count_per_timestamp <- c(count_per_timestamp,newlayer)
+      }
     }
   }
   
@@ -576,9 +580,9 @@ points2quad<-function(point_set,my_scale,W=NULL,mask=NULL){
   
   if(!is.null(mask)){
     Wmask <- c(min(mask$lon),
-              max(mask$lon),
-              min(mask$lat),
-              max(mask$lat))
+               max(mask$lon),
+               min(mask$lat),
+               max(mask$lat))
     my_mask <- mask %>%
       spatstat.geom::as.ppp(Wmask) %>%
       spatstat.geom::quadratcount(nlon,nlat) 
