@@ -80,16 +80,16 @@ robust.quadcount<-function(point_set,
   
   #HOW is this initialized?
   if(is.null(my_scales)) {
-    #maxscale <- 0.10*min(c(W[2] - W[1],W[4]-W[3]))
-    #minscale <- maxscale*0.01
-    #my_scales <- seq(minscale,maxscale,minscale)
-    my_scales <- seq(25,1650,25)
+    maxscale <- 0.10*min(c(W[2] - W[1],W[4] - W[3]))
+    minscale <- maxscale*0.01
+    my_scales <-  seq(minscale,maxscale,minscale)#maxscale*0.01#c(maxscale*0.25,maxscale*0.5,maxscale*0.75,maxscale)#seq(minscale,maxscale,minscale)
+    #my_scales <- seq(25,1650,25)
   }
-  
   # calculating robustness and uniformity for each granularity in 'my_scales'
   my_spatialstats <- get_spatialstats_all(point_set,
                                           my_scales,
                                           my_scales,
+                                          nsamples=nsamples,
                                           random_samples=random_samples,
                                           signif=signif,
                                           uniformity_method=uniformity_method,
@@ -102,6 +102,9 @@ robust.quadcount<-function(point_set,
   }
   robust <- my_spatialstats$robustness
   unif <- my_spatialstats$uniformity
+  plot(my_scales,robust)
+  plot(my_scales,unif)
+  
   # tradeoff analysis
   if(tradeoff_crit == "sum") {
     metric <- unif+robust
@@ -153,14 +156,22 @@ robust.quadcount<-function(point_set,
                                  random_samples = F,
                                  window_w = opt_granularity,
                                  window_h = opt_granularity)
+  
   stats_final_sample <- get_spatialstats_sample(sample_set = final_sample,
                                                 uniformity_method = uniformity_method,
                                                 signif=signif,
                                                 robustness_method = robustness_method)
-  tmp <- matrix(data=stats_final_sample$samples_covar,nrow=nrow(map$counts),ncol=ncol(map$counts))
-  map$covar <- terra::flip(terra::rast(tmp),direction="horizontal")
+  
+  tmp <- matrix(data=stats_final_sample$samples_covar,
+                nrow=nrow(map$counts),
+                ncol=ncol(map$counts))
+  
+  map$covar <- tmp %>% terra::rast() %>% terra::flip(direction="horizontal")
   terra::ext(map$covar) <- terra::ext(map$counts)
-  tmp <- matrix(data=stats_final_sample$samples_csr_pass,nrow=nrow(map$counts),ncol=ncol(map$counts))
+  tmp <- matrix(data=stats_final_sample$samples_csr_pass,
+                nrow=nrow(map$counts),
+                ncol=ncol(map$counts))
+  
   map$is.csr <- !(terra::flip(terra::rast(tmp),direction="horizontal"))
   terra::ext(map$is.csr) <- terra::ext(map$counts)
   robust <- my_spatialstats$robustness
@@ -222,23 +233,9 @@ get_spatialstats_all<-function(point_set,
   scales_covar <- vector(length=len_scales)
   # number of zeros
   scales_zeros <- vector(length=len_scales)
-  
   for(i in 1:len_scales) {
     if(verbose) {
-      cat('\014',append=T)
-      cat("Estimating uniformity and robustness at various scales:\n")
-      cat("[")
-      for(k in 1:i){
-        cat("=")
-      }
-      if(i < len_scales) {
-        for(k in (i+1):len_scales){
-          cat(" ")
-          }
-      }
-      cat("] | ")
-      cat(paste(round(100*(i/len_scales)),"%\n",sep=""),append=T)
-      Sys.sleep(.05)
+      print_progress(i,len_scales,message="Estimating uniformity and robustness at various scales:")
     }
     
     # generating set of quadrats of the current granularity for taking the samples
@@ -247,6 +244,7 @@ get_spatialstats_all<-function(point_set,
                                  nsamples = nsamples,
                                  window_w = scales_lon[i],
                                  window_h = scales_lat[i])
+    
     
     my_stats_sample <- get_spatialstats_sample(sample_set = my_samples,
                                                signif = signif,
@@ -278,7 +276,7 @@ get_spatialstats_all<-function(point_set,
              robustness = scales_robustness,
              zerors = scales_zeros
   )
- return(out)
+  return(out)
 }
 
 create_samples<-function(point_set,random_samples,nsamples,window_w,window_h) {
@@ -288,7 +286,6 @@ create_samples<-function(point_set,random_samples,nsamples,window_w,window_h) {
   min_b_lat <- min(point_set$lat)
   w_b <- max_b_lon-min_b_lon
   h_b <- max_b_lat-min_b_lat
-  
   if(random_samples == T) {
     # quadrats taken randomly
     offset_lon <- ((w_b-window_w)*runif(nsamples))+min_b_lon
@@ -338,16 +335,17 @@ get_spatialstats_sample<-function(sample_set,
   
   # for each quadrat, take a the points inside and test for robustness and internal uniformity
   for(j in 1:nsamples) {
-    
     # extracting the points inside the quadrat
-    W_ext = c(sample_set$offset_lon[j],
+    W_ext <- c(sample_set$offset_lon[j],
               sample_set$offset_lon[j]+sample_set$window_w,
               sample_set$offset_lat[j],
               sample_set$offset_lat[j]+sample_set$window_h)
     
-    sub_points <- sample_set$point_set[spatstat.geom::inside.owin(x=sample_set$point_set$lon,
-                                                                  y=sample_set$point_set$lat,
-                                                                  w=W_ext),]
+    is_inside <- spatstat.geom::inside.owin(x=sample_set$point_set$lon,
+                                            y=sample_set$point_set$lat,
+                                            w=W_ext)
+    
+    sub_points <- sample_set$point_set[is_inside,]
     
     # estimate robustness and uniformity
     if(nrow(sub_points)==0) {
@@ -361,20 +359,22 @@ get_spatialstats_sample<-function(sample_set,
     else {
       # in case we have points, calculate the metric
       
-      # allocating a slightly larger quadrat just to avoid that our sampled points to fall
-      # exactly in the boundary of the quadrat.
-      W_disp <- c(sample_set$offset_lon[j]-0.0001,
-                  sample_set$offset_lon[j]+sample_set$window_w+0.0001,
-                  sample_set$offset_lat[j]-0.0001,
-                  sample_set$offset_lat[j]+sample_set$window_h+0.0001)
+      W_disp <- c(sample_set$offset_lon[j]-0.000001,#FIX the margin to be relative
+                  (sample_set$offset_lon[j]+sample_set$window_w)+0.000001,
+                  sample_set$offset_lat[j]-0.000001,
+                  (sample_set$offset_lat[j]+sample_set$window_h)+0.000001)
       
       # testing Complete Spatial Randomness (CSR) with Clark-Evans nearest neighbor test (part of estimating uniformity)
       samples_count[j] <- nrow(sub_points)
       if(uniformity_method == "Nearest-neighbor") {
         if(samples_count[j] > 20) {
-          my_clarkevans <- spatstat.explore::clarkevans.test(spatstat.geom::as.ppp(sub_points,W_disp),alternative="two.sided")#,correction = "Donnelly")
+          my_clarkevans <- sub_points %>%
+            spatstat.geom::as.ppp(W_disp) %>%
+            spatstat.explore::clarkevans.test(alternative="two.sided")#,correction = "Donnelly")
         } else {
-          my_clarkevans <- spatstat.explore::clarkevans.test(spatstat.geom::as.ppp(sub_points,W_disp),alternative="two.sided",nsim=100)#,correction = "Donnelly")
+          my_clarkevans <- sub_points %>%
+            spatstat.geom::as.ppp(W_disp) %>%
+            spatstat.explore::clarkevans.test(alternative="two.sided",nsim=100)#,correction = "Donnelly")
         }
         samples_csr_p[j] <-  my_clarkevans$p.value
         # assign T to quadrats that pass the threshold 'signif' for CSR
@@ -382,7 +382,9 @@ get_spatialstats_sample<-function(sample_set,
       }
       else if(uniformity_method == "Quadratcount") {
         # test CST with the quadrat test
-        my_quadrattest <- spatstat.explore::quadrat.test(spatstat.geom::as.ppp(sub_points,W_disp),nx=5)
+        my_quadrattest <- sub_points %>% 
+          spatstat.geom::as.ppp(W_disp) %>%
+          spatstat.explore::quadrat.test(nx=5)
         samples_csr_p[j] <- my_quadrattest$p.value
         samples_csr_pass[j] <- my_quadrattest$p.value < (1-signif)
       }
@@ -391,24 +393,6 @@ get_spatialstats_sample<-function(sample_set,
         samples_csr_pass[j] <- NA
       }
       samples_covar[j] <- calc_covar(nrow(sub_points),sample_set$npopulation,robustness_method)
-      # Calculating robustness.
-      # First we calculate the expected coefficient of variation for the samples, using different methods
-      #prob_event = nrow(sub_points)/sample_set$npopulation
-      #if(robustness == "Binomial") {
-      #  # calculating coef of var using the Binomial estimation method (see paper)
-      #  samples_covar[j] = sqrt(prob_event*(1-prob_event)*sample_set$npopulation)/nrow(sub_points)#sd(sim_rates)/mean(sim_rates)
-      #}
-      #else if(robustness == "Poisson") {
-      #  # calculating coef of var using the Poisson estimation method (see paper)
-      #  tmp = fitdistr(nrow(sub_points),"Poisson")
-      #  samples_covar[j] = tmp$sd/tmp$estimate
-      #}
-      #else if(robustness == "Resampling") {
-      #  # calculating coef of var using the resampling estimation method (see paper)
-      #  sim_rates = rbinom(1000,sample_set$npopulation,prob_event)
-      #  samples_covar[j] = mean(sqrt(1/sim_rates[sim_rates!=0]))
-      #}
-      
     }
   }
   out <- list()
@@ -417,6 +401,7 @@ get_spatialstats_sample<-function(sample_set,
   out$samples_csr_pass <- samples_csr_pass
   out$samples_covar <- samples_covar
   out$samples_zeros <- samples_zeros
+  Sys.sleep(1)
   return(out)
 }
 
@@ -443,12 +428,95 @@ calc_covar<-function(nsub,ntotal,robustness_method){
 }
 
 
+robust.timeslices<-function(point_set,
+                            aggregation_method=c("count","density"),
+                            opt_granularity=NULL,
+                            random_samples=T,
+                            nsamples=500,
+                            signif=0.99,
+                            tradeoff_crit=c("product","sum"),#,"derivative"), #NOT doing derivative right now
+                            uniformity_method=c("Quadratcount","Nearest-neighbor"),
+                            robustness_method=c("Poisson","Binomial","Resampling"),
+                            robustness_k = -3,
+                            verbose=F,
+                            my_scales=NULL,
+                            W=NULL) {
+  time_stamps <- unique(point_set$time)
+  if(is.null(W)) {
+    W <- c(min(point_set$lon),
+           max(point_set$lon),
+           min(point_set$lat),
+           max(point_set$lat))
+  }
+  if(is.null(opt_granularity)) {
+    fullmap <- point_set %>% robust.quadcount(random_samples=random_samples,
+                                              nsamples=nsamples,
+                                              signif=signif,
+                                              tradeoff_crit=tradeoff_crit,
+                                              uniformity_method=uniformity_method,
+                                              robustness_method=robustness_method,
+                                              robustness_k = robustness_k,
+                                              verbose=verbose,
+                                              my_scales=my_scales,
+                                              W=W)
+    opt_granularity <- fullmap$opt_granularity
+  }
+  count_per_timestamp <- NULL
+  for(i in 1:length(time_stamps)){
+    newlayer <- point_set %>%
+      filter(time == time_stamps[i]) %>%
+      points2quad(opt_granularity,W) %>% 
+      quad2mat() %>%
+      terra::rast()
+    if(is.null(count_per_timestamp)) {
+      count_per_timestamp <- newlayer
+    } else {
+      count_per_timestamp <- c(count_per_timestamp,newlayer)
+    }
+  }
+  
+  out <- list(
+    estimated_slice = process_timeslices(count_per_timestamp,verbose),
+    count_per_timestamp = count_per_timestamp,
+    fullmap = fullmap
+  )
+  return(out)
+}
+
+process_timeslices<-function(count_per_timestamp,verbose=F) {
+  estimated_slice <- count_per_timestamp
+  estimated_slice[] <- NA
+  
+  for(i in 1:nrow(estimated_slice)) {
+    for(j in 1:ncol(estimated_slice)) {
+      if(verbose) {
+        print_progress(j+(i-1)*ncol(estimated_slice[[1]]),
+                       length(estimated_slice[[1]][]),
+                       "Processing time slices")
+      }
+      count_series <- count_per_timestamp[i,j,] %>% t() %>% as.numeric()
+      
+      if(length(unique(count_series)) == 1) {
+        estimated_slice[i,j,] = count_series
+      }
+      else {
+        #WHAT MODEL TO USE? MAYBE HAVE OPTIONS?
+        #my_arima <- arima(myrobb)
+        my_arima <- forecast::auto.arima(count_series)
+        estimated_slice[i,j,] <- (count_series - my_arima$residuals)
+        for(k in 1:length(estimated_slice[i,j,])){
+          if(estimated_slice[i,j,k] < 0) {
+            estimated_slice[i,j,k] <- 0
+          }
+        }
+      }
+    }
+  }
+  return(estimated_slice)
+}
 
 
-
-########################
-
-
+################################################################################
 
 
 #
@@ -457,35 +525,72 @@ calc_covar<-function(nsub,ntotal,robustness_method){
 
 quad2mat<-function(quadset) {
   tmp <- matrix(data=quadset[],nrow=nrow(quadset),ncol=ncol(quadset))
-  #tmp2 = apply(tmp, 2, rev)
-  #tmp3 = t(tmp2)
   return(tmp)
 }
 
-points2quad<-function(point_set,my_scale,mask=NULL){
-  max_b_lon <- max(point_set$lon)
-  max_b_lat <- max(point_set$lat)
-  min_b_lon <- min(point_set$lon)
-  min_b_lat <- min(point_set$lat)
-  W <- c(min(point_set$lon),
-         max(point_set$lon),
-         min(point_set$lat),
-         max(point_set$lat))
+print_progress<-function(cur_iter,n_iters,message="Processing") {
+  
+  cur_percent <- round(100*(cur_iter/n_iters))
+  
+  cat('\014',append=T)
+  cat(paste(message,":\n",sep=""))
+  cat(paste(cur_iter,n_iters,":\n"))
+  cat("[")
+  
+  for(k in 1:cur_percent){
+    cat("=")
+  }
+  if(cur_percent < 100) {
+    for(k in (cur_percent+1):100){
+      cat(" ")
+    }
+  }
+  cat("] | ")
+  cat(paste(cur_percent,"%\n",sep=""),append=T)
+}
+
+points2quad<-function(point_set,my_scale,W=NULL,mask=NULL){
+  if(is.null(W)) {
+    W <- c(min(point_set$lon),
+           max(point_set$lon),
+           min(point_set$lat),
+           max(point_set$lat))
+    max_b_lon <- max(point_set$lon)
+    max_b_lat <- max(point_set$lat)
+    min_b_lon <- min(point_set$lon)
+    min_b_lat <- min(point_set$lat)
+  } else {
+    min_b_lon <- W[1]
+    max_b_lon <- W[2]
+    min_b_lat <- W[3]
+    max_b_lat <- W[4]
+  }
   nlon <- floor((max_b_lon - min_b_lon)/my_scale)
   nlat <- floor((max_b_lat - min_b_lat)/my_scale)
-  my_ret <- spatstat.geom::quadratcount(spatstat.geom::as.ppp(point_set,W),nlon,nlat)
+  my_ret <- point_set %>%
+    spatstat.geom::as.ppp(W) %>%
+    spatstat.geom::quadratcount(nlon,nlat)
   
   if(!is.null(mask)){
-    Wmask = c(min(mask$lon),
+    Wmask <- c(min(mask$lon),
               max(mask$lon),
               min(mask$lat),
               max(mask$lat))
-    my_mask <- spatstat.geom::quadratcount(spatstat.geom::as.ppp(mask,Wmask),nlon,nlat) 
-    my_ret[my_mask <= 0] = NA
+    my_mask <- mask %>%
+      spatstat.geom::as.ppp(Wmask) %>%
+      spatstat.geom::quadratcount(nlon,nlat) 
+    my_ret[my_mask <= 0] <- NA
   }
   
   return(my_ret)
 }
+
+
+
+########################
+#
+# WORK IN PROGRESS!
+#
 
 
 #
@@ -508,7 +613,8 @@ robust.density.unit<-function(count_mat,mask_mat=NULL,i,j,max_mask){
     if(j_min < 1) j_min <- 1
     if(j_max > dim_count[2]) j_max <- dim_count[2]
     
-    my_mask <- max_mask[(1001-(i-i_min)):(1001 + (i_max-i)),(1001-(j-j_min)):(1001 + (j_max-j))] <= k
+    my_mask <- max_mask[(1001-(i-i_min)):(1001 + (i_max-i)),
+                        (1001-(j-j_min)):(1001 + (j_max-j))] <= k
     my_mask[!my_mask] <- NA
     
     sample_count <- count_mat[i_min:i_max,j_min:j_max]*my_mask[]
@@ -582,10 +688,6 @@ robust.density<-function(point_pattern,pointsAsMask=NULL,res_lat,res_lon){
     print(100*i/n_row)
     
     for(j in 1:n_col){
-      #print(i)
-      #print(n_row)
-      #print(j)
-      #print(n_col)
       x <- min_lon+res_lon*(j-0.5)
       y <- min_lat+res_lat*(i-0.5)
       est <- robust.density.unit(count_mat,mask_mat,i,j,max_mask)
@@ -601,3 +703,4 @@ robust.density<-function(point_pattern,pointsAsMask=NULL,res_lat,res_lon){
   }
   return(list(dens_mat,coefvar_mat,k_mat))
 }
+
