@@ -78,7 +78,6 @@ burglary_map$opt_granularity
 
 # Plotting resulting map
 terra::plot(burglary_map$counts)
-
 }
 \references{
 Ramos, R. G., Silva, B. F., Clarke, K. C., & Prates, M. (2021).
