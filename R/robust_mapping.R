@@ -447,6 +447,7 @@ robust.grid<-function(point_set,
                       my_scales=NULL,
                       W=NULL) {
   if(is.null(W)) {
+    print("W!")
     W <- c(min(point_set$lon),
            max(point_set$lon),
            min(point_set$lat),
@@ -480,10 +481,14 @@ robust.grid<-function(point_set,
         count_per_timestamp <- c(count_per_timestamp,newlayer)
       }
     }
+    print(terra::ext(W))
+    terra::ext(count_per_timestamp) <- terra::ext(W)
+    estimated_slice <- process_timeslices(count_per_timestamp,verbose)
+    terra::ext(estimated_slice) <- terra::ext(W)
   }
   
   out <- list(
-    estimated_slice = process_timeslices(count_per_timestamp,verbose),
+    estimated_slice = estimated_slice,
     count_per_timestamp = count_per_timestamp,
     fullmap = fullmap
   )
@@ -522,13 +527,59 @@ process_timeslices<-function(count_per_timestamp,verbose=F) {
   return(estimated_slice)
 }
 
+#' Estimate robust per capita rates from a event count map (numerator)
+#' and a reference population map (denominator); both need to be
+#' SpatRaster grids with the same dimensions and covering the same extent.
+#' Event count map can be generated using robust.grid or robust.quadcount
+#' from a point set.
+#' @export
+#' 
+
+robust.percapita<-function(numerator,denominator,bd=NULL,weighted=F){
+  
+  percapita_map <- numerator
+  
+  my_data <- data.frame(numerator = numerator[[1]][],
+                        denominator = denominator[[1]][])
+  
+  colnames(my_data) <- c("numerator","denominator")
+  
+  is_complete <- complete.cases(my_data)
+  
+  my_coords <- terra::crds(numerator[[1]])
+  if(weighted) {
+    weights <- as.numeric(denominator[[1]][])[is_complete]
+  } else {
+    weights <- NULL
+  }
+  
+  if(is.null(bd)) {
+    print("Estimating bandwidth...")
+    print(head(my_data[is_complete,]))
+    print(head(my_coords[is_complete,]))
+    bd <- spgwr::gwr.sel(formula = numerator~denominator+0,
+                         data = my_data[is_complete,],
+                         coords = my_coords[is_complete,],
+                         weights = weights)
+    print(paste("Bandwidth is ",bd,sep=""))
+  } 
+  print("Estimating per capita ratio...")
+  percapita_model <- spgwr::gwr(formula = numerator~denominator+0,
+                                data = my_data[is_complete,],
+                                coords = my_coords[is_complete,],
+                                bandwidth = bd,
+                                weights = weights)
+  percapita_map[] <- NA
+  percapita_map[is_complete] <- percapita_model$SDF$denominator
+  
+  return(percapita_map)
+}
 
 ################################################################################
-
-
 #
-#   Utility functions, for ploting quadrat counts etc.
+#   Utility functions, for plotting quadrat counts etc.
 #
+################################################################################
 
 quad2mat<-function(quadset) {
   tmp <- matrix(data=quadset[],nrow=nrow(quadset),ncol=ncol(quadset))
@@ -541,7 +592,6 @@ print_progress<-function(cur_iter,n_iters,message="Processing") {
   
   cat('\014',append=T)
   cat(paste(message,":\n",sep=""))
-  cat(paste(cur_iter,n_iters,":\n"))
   cat("[")
   
   for(k in 1:cur_percent){
@@ -592,13 +642,11 @@ points2quad<-function(point_set,my_scale,W=NULL,mask=NULL){
   return(my_ret)
 }
 
-
-
-########################
+################################################################################
 #
 # WORK IN PROGRESS!
 #
-
+################################################################################
 
 #
 # Density estimation using max robustness while preserving uniformity
