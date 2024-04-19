@@ -97,7 +97,7 @@ robust.quadcount<-function(point_set,
   # initializing a set of scales to test if that hasn't been provided
   if(is.null(my_scales)) {
     maxscale <- 0.10*min(c(W[2] - W[1],W[4] - W[3]))
-    minscale <- maxscale*0.01
+    minscale <- maxscale*0.02
     my_scales <-  seq(minscale,maxscale,minscale)
   }
   # calculating robustness and uniformity for each granularity in 'my_scales'
@@ -169,6 +169,7 @@ robust.quadcount<-function(point_set,
   map$opt_granularity <- opt_granularity
   final_sample <- create_samples(point_set=point_set,
                                  random_samples = F,
+                                 nsamples = nsamples,
                                  window_w = opt_granularity,
                                  window_h = opt_granularity,
                                  W = W)
