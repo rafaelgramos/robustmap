@@ -1,16 +1,24 @@
 Package: robustmap
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9000
-Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+Title: Robust mapping of spatiotemporal data
+Version: 1.0.0.000
+Authors@R:
+    person("Rafael G.", "Ramos", , "rafael.ramos@inpe.br", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0001-9307-5922"))
+Description: Functions for robust mapping of spatiotemporal data, including point aggregation considering error and internal uniformity, and improving estimation of time slices and per rates.
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
-Suggests: 
+Imports: 
+    forecast,
     knitr,
-    rmarkdown
+    magrittr,
+    MASS,
+    qpdf,
+    rmarkdown,
+    sf,
+    spatstat.explore,
+    spatstat.geom,
+    spgwr,
+    terra
+License: MIT + file LICENSE
 VignetteBuilder: knitr

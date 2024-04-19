@@ -2,13 +2,23 @@
 % Please edit documentation in R/robust_mapping.R
 \name{robust.percapita}
 \alias{robust.percapita}
-\title{Estimate robust per capita rates from a event count map (numerator)
-and a reference population map (denominator); both need to be
-SpatRaster grids with the same dimensions and covering the same extent.
-Event count map can be generated using robust.grid or robust.quadcount
-from a point set.}
+\title{Robust per capita rates from gridded data}
 \usage{
 robust.percapita(numerator, denominator, bd = NULL, weighted = F)
+}
+\arguments{
+\item{numerator:}{an event count grid (SpatRaster)}
+
+\item{denominator:}{a reference population map grid (SpatRaster), of the same
+dimensions, extent and resolution as numerator.}
+
+\item{bd:}{bandwidth to be used by the GWR model. If NULL (default),
+bandwidth is estimated by cross-validation (using spgwr::gwr.sel())}
+
+\item{weighted:}{if true, denominator is used also as weights for the
+residuals in a Weighted Least Squares fashion. The rational is that areas
+with a greater denominator (e.g. more individuals experiencing a per capita
+rate) should have greater weight in the estimation of the rate.}
 }
 \description{
 Estimate robust per capita rates from a event count map (numerator)
@@ -17,3 +27,15 @@ SpatRaster grids with the same dimensions and covering the same extent.
 Event count map can be generated using robust.grid or robust.quadcount
 from a point set.
 }
+\references{
+Ramos, R. G. (2021). Improving victimization risk estimation:
+A geographically weighted regression approach. ISPRS International Journal of
+Geo-Information, 10(6), 364.
+}
+\author{
+Rafael G. Ramos (main proponent and coder)
+}
+\keyword{adequate}
+\keyword{granularity}
+\keyword{optimal}
+\keyword{quadrat}

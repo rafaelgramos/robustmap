@@ -15,12 +15,14 @@ robust.quadcount(
   robustness_k = -3,
   verbose = F,
   my_scales = NULL,
-  W = NULL
+  W = NULL,
+  grid_crs = NULL
 )
 }
 \arguments{
 \item{point_set:}{the point set for which you want to find the optimal quadrat
-size}
+size. Must be provided as a dataframe with the first column being the
+'easting' (e.g. x, longitude) and the second column the northing (e.g y, latitude)}
 
 \item{random_sample:}{whether uniformity and robustness is estimated from a
 random sample (T) or by generating a regular grid at the granularity being
@@ -43,7 +45,7 @@ the nearest neighbor method. In practice, the result should not differ much}
 
 \item{robustness_method:}{how the robustness of each granularity is estimated
 (via a Poisson model, a Binomail model, or by resampling the original point set)
-In practice, any of the options yeilds similar results.}
+In practice, any of the options yields similar results.}
 
 \item{robustness_k:}{robustness of a cell is calculated by taking the estimated coefficient
 of variation for a cell - let's call it x - and applying the function exp(k*x). This
@@ -59,6 +61,9 @@ dimension (side) of a cell, in the unit used for the coordinates of point_set.}
 \item{W:}{the window of interest to be considered when doing the analyzis of
 point_set. If not provided, W is calculated as the minimum bounding rectangle
 for point_set.}
+
+\item{grid_crs:}{coordinate reference system of the points, will be ascribed to the
+resulting grid}
 }
 \description{
 Given a point set, finds an optimal granularity for quadrat counting that
@@ -67,9 +72,11 @@ balances uniformity and robustness, as described in Ramos et al. (2021).
 \examples{
 library(robustmap)
 # Loading point data
-burglary <- sf::read_sf(dsn = "data", layer = "burglary")
-burglary <- data.frame(lon=burglary$lon_m,
-                       lat=burglary$lat_m)
+burglary <- sf::read_sf(dsn = "inst/extdata", layer = "burglary")
+
+burglary <- data.frame(x=burglary$lon_m,
+                       y=burglary$lat_m)
+
 # Estimating optimal granularity using robust.quadcount
 burglary_map <- robust.quadcount(burglary,verbose = T)
 

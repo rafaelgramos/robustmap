@@ -21,7 +21,7 @@ library(magrittr)
 library(robustmap)
 
 # Loading burglary data points
-burglary <- sf::read_sf(dsn = "../data", layer = "burglary")
+burglary <- sf::read_sf(dsn = "../inst/extdata", layer = "burglary")
 burglary <- data.frame(lon=burglary$lon_m,
                        lat=burglary$lat_m)
 
