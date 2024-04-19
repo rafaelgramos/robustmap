@@ -67,7 +67,7 @@
 
 robust.quadcount<-function(point_set,
                            random_samples=T,
-                           nsamples=500,
+                           nsamples=200,
                            signif=0.99,
                            tradeoff_crit=c("product","sum"),#,"derivative"), #NOT doing derivative right now
                            uniformity_method=c("Quadratcount","Nearest-neighbor"),
