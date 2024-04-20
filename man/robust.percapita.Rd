@@ -4,18 +4,18 @@
 \alias{robust.percapita}
 \title{Robust per capita rates from gridded data}
 \usage{
-robust.percapita(numerator, denominator, bd = NULL, weighted = F)
+robust.percapita(numerator, denominator, bd = NULL, weighted = FALSE)
 }
 \arguments{
-\item{numerator:}{an event count grid (SpatRaster)}
+\item{numerator}{an event count grid (SpatRaster)}
 
-\item{denominator:}{a reference population map grid (SpatRaster), of the same
+\item{denominator}{a reference population map grid (SpatRaster), of the same
 dimensions, extent and resolution as numerator.}
 
-\item{bd:}{bandwidth to be used by the GWR model. If NULL (default),
+\item{bd}{bandwidth to be used by the GWR model. If NULL (default),
 bandwidth is estimated by cross-validation (using spgwr::gwr.sel())}
 
-\item{weighted:}{if true, denominator is used also as weights for the
+\item{weighted}{if true, denominator is used also as weights for the
 residuals in a Weighted Least Squares fashion. The rational is that areas
 with a greater denominator (e.g. more individuals experiencing a per capita
 rate) should have greater weight in the estimation of the rate.}

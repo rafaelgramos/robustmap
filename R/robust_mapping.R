@@ -3,38 +3,38 @@
 #' Given a point set, finds an optimal granularity for quadrat counting that
 #' balances uniformity and robustness, as described in Ramos et al. (2021).
 #'
-#' @param point_set: the point set for which you want to find the optimal quadrat
+#' @param point_set the point set for which you want to find the optimal quadrat
 #' size. Must be provided as a dataframe with the first column being the
 #' 'easting' (e.g. x, longitude) and the second column the northing (e.g y, latitude)
-#' @param random_sample: whether uniformity and robustness is estimated from a
+#' @param random_sample whether uniformity and robustness is estimated from a
 #' random sample (T) or by generating a regular grid at the granularity being
 #' tested (F). Using random samples generally takes less time and yields similar
 #' results.
-#' @param nsamples: number of samples taken if random_sample == T. In practice,
+#' @param nsamples number of samples taken if random_sample == T. In practice,
 #' the default value seems to work fine.
-#' @param signif: significance level for the Complete Spatial Randomness (CSR) test that is 
+#' @param signif significance level for the Complete Spatial Randomness (CSR) test that is 
 #' applied for the samples at each different granulairity considered.
-#' @param tradeoff_crit: dictactes how the balance between uniformity and robustness
+#' @param tradeoff_crit dictactes how the balance between uniformity and robustness
 #' is determined in order to choose an optimal quadrat size. 'sum' m,eans that the
 #' granularity with the greates sum of uniformity and robustness gets picked, 'product'
 #' means that the granularity yielding the greatest product is picked.
-#' @param uniformity_method: whether CSR is tested via the quadratcount method or
+#' @param uniformity_method whether CSR is tested via the quadratcount method or
 #' the nearest neighbor method. In practice, the result should not differ much
-#' @param robustness_method: how the robustness of each granularity is estimated 
+#' @param robustness_method how the robustness of each granularity is estimated 
 #' (via a Poisson model, a Binomail model, or by resampling the original point set)
 #' In practice, any of the options yields similar results.
-#' @param robustness_k: robustness of a cell is calculated by taking the estimated coefficient
+#' @param robustness_k robustness of a cell is calculated by taking the estimated coefficient
 #' of variation for a cell - let's call it x - and applying the function exp(k*x). This
 #' parameter specificies which k is used. In practice, the final result is not very
 #' sensitive to the specific value of k
-#' @param verbose: whether to print messages while running the function or not
-#' @param my_scales: which granularities to be tested. If not provided, a set is
+#' @param verbose whether to print messages while running the function or not
+#' @param my_scales which granularities to be tested. If not provided, a set is
 #' automatically generated. The granularities, if provided, should be given as the
 #' dimension (side) of a cell, in the unit used for the coordinates of point_set.
-#' @param W: the window of interest to be considered when doing the analyzis of
+#' @param W the window of interest to be considered when doing the analyzis of
 #' point_set. If not provided, W is calculated as the minimum bounding rectangle
 #' for point_set.
-#' @param grid_crs: coordinate reference system of the points, will be ascribed to the
+#' @param grid_crs coordinate reference system of the points, will be ascribed to the
 #' resulting grid
 #' @keywords quadrat granularity adequate optimal
 #' @author Rafael G. Ramos (main proponent and coder), Marcos Prates (contributor)
@@ -42,29 +42,32 @@
 #' Too Fine to be Good? Issues of Granularity, Uniformity and Error in Spatial 
 #' Crime Analysis. Journal of Quantitative Criminology, 1-25.
 #' robust.quadcount()
-#' @import terra
-#' @importFrom magrittr %>%
-#' @importFrom stats chisq.test complete.cases filter rbinom runif
-#' @importFrom stats smooth.spline var
-#' @export
-#' 
+#'
 #' @examples
+#' 
 #' library(robustmap)
 #' # Loading point data
-#' burglary <- sf::read_sf(dsn = "inst/extdata", layer = "burglary")
+#' file1 = system.file("extdata/burglary.shp", package = "robustmap")
+#' burglary <- sf::read_sf(file1, layer = "burglary")
 #' 
 #' burglary <- data.frame(x=burglary$lon_m,
 #'                        y=burglary$lat_m)
 #' 
 #' # Estimating optimal granularity using robust.quadcount
-#' burglary_map <- robust.quadcount(burglary,verbose = T)
+#' burglary_map <- robust.quadcount(burglary,verbose = TRUE)
 #' 
 #' # Retriving estimated granularity
 #' burglary_map$opt_granularity
 #' 
 #' # Plotting resulting map
 #' terra::plot(burglary_map$counts)
-
+#'
+#' @import terra
+#' @importFrom magrittr %>%
+#' @importFrom stats chisq.test complete.cases filter rbinom runif
+#' @importFrom stats smooth.spline var
+#' @import qpdf
+#' @export
 robust.quadcount<-function(point_set,
                            random_samples=T,
                            nsamples=200,
@@ -73,7 +76,7 @@ robust.quadcount<-function(point_set,
                            uniformity_method=c("Quadratcount","Nearest-neighbor"),
                            robustness_method=c("Poisson","Binomial","Resampling"),
                            robustness_k = -3,
-                           verbose=F,
+                           verbose=FALSE,
                            my_scales=NULL,
                            W=NULL,
                            grid_crs=NULL){
@@ -221,7 +224,7 @@ robust.quadcount<-function(point_set,
 get_spatialstats_all<-function(point_set,
                                scales_x,
                                scales_y,
-                               random_samples=T,
+                               random_samples=TRUE,
                                nsamples=500,
                                signif=0.90,
                                robustness_method=c("Poisson","Binomial","Resampling"),
@@ -462,73 +465,73 @@ calc_covar<-function(nsub,ntotal,robustness_method){
 #' 
 #' Estimate robust grid using either counts or density (NOT IMPLEMENTED YET)
 #' and with a time dimension (optional) as separate layers.
-#' @export
 #'
-#' @param point_set: the point set for which you want to find the optimal quadrat
+#' @param point_set the point set for which you want to find the optimal quadrat
 #' size. Must be provided as a dataframe with the first column being the
 #' 'easting' (e.g. x, longitude) and the second column the northing (e.g y, latitude)
-#' @param aggregation_method: how should the points be aggregated per cell?
+#' @param aggregation_method how should the points be aggregated per cell?
 #' 'count' will count the number of points per cell using robust.quadcount
 #' (and proceed from there), while 'density' (NOT IMPLEMENTED YET) will estimate
 #' the density from the point set using robust.density 
-#' @param temporal: should time slices be generated from the point set? if so
+#' @param opt_granularity if a value is passed, then the optimal granularity
+#' estimation step is skipped
+#' @param temporal should time slices be generated from the point set? if so
 #' a time stamp should be provided in a third column for point_set.
-#' @param robust_timeslices: if temporal is TRUE, robust_timeslices being TRUE
+#' @param robust_timeslices if temporal is TRUE, robust_timeslices being TRUE
 #' further processes the time slices for improved accuraracy (NEED TO FORMALIZE VALIDATION!)
-#' @param verbose: whether to print messages while running the function or not
-#' @param W: the window of interest to be considered when doing the analyzis of
+#' @param verbose whether to print messages while running the function or not
+#' @param W the window of interest to be considered when doing the analyzis of
 #' point_set. If not provided, W is calculated as the minimum bounding rectangle
 #' for point_set.
 #' 
 #' The following are parameters for the 'count' aggregation method,
 #' to be passed on to the robust.count 
 #' 
-#' @param random_sample: whether uniformity and robustness is estimated from a
+#' @param random_samples whether uniformity and robustness is estimated from a
 #' random sample (T) or by generating a regular grid at the granularity being
 #' tested (F). Using random samples generally takes less time and yields similar
 #' results.
-#' @param nsamples: number of samples taken if random_sample == T. In practice,
+#' @param nsamples number of samples taken if random_sample == T. In practice,
 #' the default value seems to work fine.
-#' @param signif: significance level for the Complete Spatial Randomness (CSR) test that is 
+#' @param signif significance level for the Complete Spatial Randomness (CSR) test that is 
 #' applied for the samples at each different granulairity considered.
-#' @param tradeoff_crit: dictactes how the balance between uniformity and robustness
+#' @param tradeoff_crit dictactes how the balance between uniformity and robustness
 #' is determined in order to choose an optimal quadrat size. 'sum' m,eans that the
 #' granularity with the greates sum of uniformity and robustness gets picked, 'product'
 #' means that the granularity yielding the greatest product is picked.
-#' @param uniformity_method: whether CSR is tested via the quadratcount method or
+#' @param uniformity_method whether CSR is tested via the quadratcount method or
 #' the nearest neighbor method. In practice, the result should not differ much
-#' @param robustness_method: how the robustness of each granularity is estimated 
+#' @param robustness_method how the robustness of each granularity is estimated 
 #' (via a Poisson model, a Binomail model, or by resampling the original point set)
 #' In practice, any of the options yeilds similar results.
-#' @param robustness_k: robustness of a cell is calculated by taking the estimated coefficient
+#' @param robustness_k robustness of a cell is calculated by taking the estimated coefficient
 #' of variation for a cell - let's call it x - and applying the function exp(k*x). This
 #' parameter specificies which k is used. In practice, the final result is not very
 #' sensitive to the specific value of k
-#' @param my_scales: which granularities to be tested. If not provided, a set is
+#' @param my_scales which granularities to be tested. If not provided, a set is
 #' automatically generated. The granularities, if provided, should be given as the
 #' dimension (side) of a cell, in the unit used for the coordinates of point_set.
-#' @param grid_crs: coordinates reference system of the points, will be ascribed to the
+#' @param grid_crs coordinates reference system of the points, will be ascribed to the
 #' resulting grid
 #' 
 #' @keywords quadrat granularity adequate optimal time
 #' @references Ramos, R. G., Silva, B. F., Clarke, K. C., & Prates, M. (2021). 
 #' Too Fine to be Good? Issues of Granularity, Uniformity and Error in Spatial 
 #' Crime Analysis. Journal of Quantitative Criminology, 1-25.
-#' robust.quadcount()
-
+#' @export 
 robust.grid<-function(point_set,
                       aggregation_method=c("count","density"),
-                      temporal=T,
-                      robust_timeslices = T,
+                      temporal=TRUE,
+                      robust_timeslices = TRUE,
                       opt_granularity=NULL,
-                      random_samples=T,
+                      random_samples=TRUE,
                       nsamples=500,
                       signif=0.99,
                       tradeoff_crit=c("product","sum"),#,"derivative"), #NOT doing derivative right now
                       uniformity_method=c("Quadratcount","Nearest-neighbor"),
                       robustness_method=c("Poisson","Binomial","Resampling"),
                       robustness_k = -3,
-                      verbose=F,
+                      verbose=FALSE,
                       my_scales=NULL,
                       W=NULL,
                       grid_crs=NULL) {
@@ -618,9 +621,11 @@ robust.grid<-function(point_set,
 #' cell-time is assigned as the improved, more robust rate. More formal
 #' validation is still required, but simulation tests I've ran show that it
 #' does yield better estimates.
+#' @param observed_counts_timestamp stack of rasters to be processed
+#' @param verbose whether to print messages while running the function or not
+#' @keywords quadrat granularity adequate optimal time
 #' @export
-
-robust.timeslices<-function(observed_counts_timestamp,verbose=F) {
+robust.timeslices<-function(observed_counts_timestamp,verbose=FALSE) {
   estimated_rates_timestamp <- observed_counts_timestamp
   estimated_rates_timestamp[] <- NA
   
@@ -652,6 +657,8 @@ robust.timeslices<-function(observed_counts_timestamp,verbose=F) {
   return(estimated_rates_timestamp)
 }
 
+# NEED TO ADD @returns!!!
+
 #' Robust per capita rates from gridded data
 #'
 #' Estimate robust per capita rates from a event count map (numerator)
@@ -659,14 +666,13 @@ robust.timeslices<-function(observed_counts_timestamp,verbose=F) {
 #' SpatRaster grids with the same dimensions and covering the same extent.
 #' Event count map can be generated using robust.grid or robust.quadcount
 #' from a point set.
-#' @export
 #'
-#' @param numerator: an event count grid (SpatRaster)
-#' @param denominator: a reference population map grid (SpatRaster), of the same
+#' @param numerator an event count grid (SpatRaster)
+#' @param denominator a reference population map grid (SpatRaster), of the same
 #' dimensions, extent and resolution as numerator.
-#' @param bd: bandwidth to be used by the GWR model. If NULL (default),
+#' @param bd bandwidth to be used by the GWR model. If NULL (default),
 #' bandwidth is estimated by cross-validation (using spgwr::gwr.sel())
-#' @param weighted: if true, denominator is used also as weights for the 
+#' @param weighted if true, denominator is used also as weights for the 
 #' residuals in a Weighted Least Squares fashion. The rational is that areas 
 #' with a greater denominator (e.g. more individuals experiencing a per capita
 #' rate) should have greater weight in the estimation of the rate.
@@ -676,8 +682,7 @@ robust.timeslices<-function(observed_counts_timestamp,verbose=F) {
 #' A geographically weighted regression approach. ISPRS International Journal of
 #'  Geo-Information, 10(6), 364.
 #' @export
-
-robust.percapita<-function(numerator,denominator,bd=NULL,weighted=F){
+robust.percapita<-function(numerator,denominator,bd=NULL,weighted=FALSE){
   
   percapita_map <- numerator
   

@@ -21,12 +21,14 @@ library(magrittr)
 library(robustmap)
 
 # Loading burglary data points
-burglary <- sf::read_sf(dsn = "../inst/extdata", layer = "burglary")
+file1 = system.file("extdata/burglary.shp", package = "robustmap")
+
+burglary <- sf::read_sf(file1)
 burglary <- data.frame(x=burglary$lon_m,
                        y=burglary$lat_m)
 
 # Running robust_quadcount with default parameters
-burglary_map <- burglary %>% robust.quadcount()
+burglary_map <- burglary %>% robust.quadcount(nsamples=200)
 
 ```
 

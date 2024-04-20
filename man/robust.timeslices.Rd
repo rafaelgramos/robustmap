@@ -4,7 +4,12 @@
 \alias{robust.timeslices}
 \title{Robust time slices from gridded data stack}
 \usage{
-robust.timeslices(observed_counts_timestamp, verbose = F)
+robust.timeslices(observed_counts_timestamp, verbose = FALSE)
+}
+\arguments{
+\item{observed_counts_timestamp}{stack of rasters to be processed}
+
+\item{verbose}{whether to print messages while running the function or not}
 }
 \description{
 Improves the rates per cells for each timeslice by considering information
@@ -14,3 +19,8 @@ cell-time is assigned as the improved, more robust rate. More formal
 validation is still required, but simulation tests I've ran show that it
 does yield better estimates.
 }
+\keyword{adequate}
+\keyword{granularity}
+\keyword{optimal}
+\keyword{quadrat}
+\keyword{time}

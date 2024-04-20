@@ -7,81 +7,81 @@
 robust.grid(
   point_set,
   aggregation_method = c("count", "density"),
-  temporal = T,
-  robust_timeslices = T,
+  temporal = TRUE,
+  robust_timeslices = TRUE,
   opt_granularity = NULL,
-  random_samples = T,
+  random_samples = TRUE,
   nsamples = 500,
   signif = 0.99,
   tradeoff_crit = c("product", "sum"),
   uniformity_method = c("Quadratcount", "Nearest-neighbor"),
   robustness_method = c("Poisson", "Binomial", "Resampling"),
   robustness_k = -3,
-  verbose = F,
+  verbose = FALSE,
   my_scales = NULL,
   W = NULL,
   grid_crs = NULL
 )
 }
 \arguments{
-\item{point_set:}{the point set for which you want to find the optimal quadrat
+\item{point_set}{the point set for which you want to find the optimal quadrat
 size. Must be provided as a dataframe with the first column being the
 'easting' (e.g. x, longitude) and the second column the northing (e.g y, latitude)}
 
-\item{aggregation_method:}{how should the points be aggregated per cell?
+\item{aggregation_method}{how should the points be aggregated per cell?
 'count' will count the number of points per cell using robust.quadcount
 (and proceed from there), while 'density' (NOT IMPLEMENTED YET) will estimate
 the density from the point set using robust.density}
 
-\item{temporal:}{should time slices be generated from the point set? if so
+\item{temporal}{should time slices be generated from the point set? if so
 a time stamp should be provided in a third column for point_set.}
 
-\item{robust_timeslices:}{if temporal is TRUE, robust_timeslices being TRUE
+\item{robust_timeslices}{if temporal is TRUE, robust_timeslices being TRUE
 further processes the time slices for improved accuraracy (NEED TO FORMALIZE VALIDATION!)}
 
-\item{verbose:}{whether to print messages while running the function or not}
+\item{nsamples}{number of samples taken if random_sample == T. In practice,
+the default value seems to work fine.}
 
-\item{W:}{the window of interest to be considered when doing the analyzis of
+\item{signif}{significance level for the Complete Spatial Randomness (CSR) test that is
+applied for the samples at each different granulairity considered.}
+
+\item{tradeoff_crit}{dictactes how the balance between uniformity and robustness
+is determined in order to choose an optimal quadrat size. 'sum' m,eans that the
+granularity with the greates sum of uniformity and robustness gets picked, 'product'
+means that the granularity yielding the greatest product is picked.}
+
+\item{uniformity_method}{whether CSR is tested via the quadratcount method or
+the nearest neighbor method. In practice, the result should not differ much}
+
+\item{robustness_method}{how the robustness of each granularity is estimated
+(via a Poisson model, a Binomail model, or by resampling the original point set)
+In practice, any of the options yeilds similar results.}
+
+\item{robustness_k}{robustness of a cell is calculated by taking the estimated coefficient
+of variation for a cell - let's call it x - and applying the function exp(k*x). This
+parameter specificies which k is used. In practice, the final result is not very
+sensitive to the specific value of k}
+
+\item{verbose}{whether to print messages while running the function or not}
+
+\item{my_scales}{which granularities to be tested. If not provided, a set is
+automatically generated. The granularities, if provided, should be given as the
+dimension (side) of a cell, in the unit used for the coordinates of point_set.}
+
+\item{W}{the window of interest to be considered when doing the analyzis of
 point_set. If not provided, W is calculated as the minimum bounding rectangle
 for point_set.
 
 The following are parameters for the 'count' aggregation method,
 to be passed on to the robust.count}
 
-\item{random_sample:}{whether uniformity and robustness is estimated from a
+\item{grid_crs}{coordinates reference system of the points, will be ascribed to the
+resulting grid}
+
+\item{random_sample}{whether uniformity and robustness is estimated from a
 random sample (T) or by generating a regular grid at the granularity being
 tested (F). Using random samples generally takes less time and yields similar
 results.}
-
-\item{nsamples:}{number of samples taken if random_sample == T. In practice,
-the default value seems to work fine.}
-
-\item{signif:}{significance level for the Complete Spatial Randomness (CSR) test that is
-applied for the samples at each different granulairity considered.}
-
-\item{tradeoff_crit:}{dictactes how the balance between uniformity and robustness
-is determined in order to choose an optimal quadrat size. 'sum' m,eans that the
-granularity with the greates sum of uniformity and robustness gets picked, 'product'
-means that the granularity yielding the greatest product is picked.}
-
-\item{uniformity_method:}{whether CSR is tested via the quadratcount method or
-the nearest neighbor method. In practice, the result should not differ much}
-
-\item{robustness_method:}{how the robustness of each granularity is estimated
-(via a Poisson model, a Binomail model, or by resampling the original point set)
-In practice, any of the options yeilds similar results.}
-
-\item{robustness_k:}{robustness of a cell is calculated by taking the estimated coefficient
-of variation for a cell - let's call it x - and applying the function exp(k*x). This
-parameter specificies which k is used. In practice, the final result is not very
-sensitive to the specific value of k}
-
-\item{my_scales:}{which granularities to be tested. If not provided, a set is
-automatically generated. The granularities, if provided, should be given as the
-dimension (side) of a cell, in the unit used for the coordinates of point_set.}
-
-\item{grid_crs:}{coordinates reference system of the points, will be ascribed to the
-resulting grid}
 }
 \description{
 Estimate robust grid using either counts or density (NOT IMPLEMENTED YET)
@@ -91,7 +91,6 @@ and with a time dimension (optional) as separate layers.
 Ramos, R. G., Silva, B. F., Clarke, K. C., & Prates, M. (2021).
 Too Fine to be Good? Issues of Granularity, Uniformity and Error in Spatial
 Crime Analysis. Journal of Quantitative Criminology, 1-25.
-robust.quadcount()
 }
 \keyword{adequate}
 \keyword{granularity}
